@@ -54,8 +54,8 @@ For detailed documentation, see [docs/quickstart.md](docs/quickstart.md).
 
 ## License
 
-MIT OR Apache-2.0
+Apache-2.0
 
 ## Repository
 
-https://github.com/your-org/constraint
+https://github.com/gonewton/constraint
