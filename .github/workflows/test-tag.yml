@@ -3,7 +3,7 @@ name: Test Tag Trigger
 on:
   push:
     tags:
-      - 'v*.*.*'
+      - 'v*'
 
 jobs:
   test:
