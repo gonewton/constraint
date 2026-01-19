@@ -32,39 +32,39 @@ pub enum Commands {
 #[derive(Parser)]
 pub struct AddArgs {
     /// Constraint type (MUST, SHALL, SHOULD, MAY, FORBIDDEN)
-    #[arg(short, long)]
+    #[arg(short = 'T', long)]
     pub r#type: String,
 
     /// Category for the constraint (e.g., security, testing, performance)
-    #[arg(short, long)]
+    #[arg(short = 'c', long)]
     pub category: String,
 
     /// Constraint text/description
-    #[arg(short, long)]
+    #[arg(short = 'x', long)]
     pub text: String,
 
     /// Author of the constraint
-    #[arg(short, long)]
+    #[arg(short = 'A', long)]
     pub author: String,
 
     /// Explicit constraint ID (optional, auto-generated if not provided)
-    #[arg(short, long)]
+    #[arg(short = 'i', long)]
     pub id: Option<String>,
 
     /// Comma-separated list of tags
-    #[arg(short, long, value_delimiter = ',')]
+    #[arg(short = 'g', long, value_delimiter = ',')]
     pub tags: Vec<String>,
 
     /// Priority level (P1, P2, P3)
-    #[arg(short, long)]
+    #[arg(short = 'P', long)]
     pub priority: Option<String>,
 
     /// Reference information
-    #[arg(short, long)]
+    #[arg(short = 'R', long)]
     pub references: Option<String>,
 
     /// Verification command/script
-    #[arg(short, long)]
+    #[arg(short = 'V', long)]
     pub verification: Option<String>,
 }
 
@@ -72,11 +72,11 @@ pub struct AddArgs {
 #[derive(Parser)]
 pub struct ListArgs {
     /// Filter by category
-    #[arg(short, long)]
+    #[arg(short = 'C', long)]
     pub category: Option<String>,
 
     /// Output format (human, json)
-    #[arg(short, long, default_value = "human")]
+    #[arg(short = 'o', long, default_value = "human")]
     pub format: String,
 }
 
@@ -87,11 +87,11 @@ pub struct SearchArgs {
     pub query: String,
 
     /// Limit search to specific category
-    #[arg(short, long)]
+    #[arg(short = 'C', long)]
     pub category: Option<String>,
 
     /// Output format (human, json)
-    #[arg(short, long, default_value = "human")]
+    #[arg(short = 'o', long, default_value = "human")]
     pub format: String,
 }
 
@@ -102,23 +102,23 @@ pub struct PatchArgs {
     pub id: String,
 
     /// Updated constraint text
-    #[arg(short, long)]
+    #[arg(short = 'x', long)]
     pub text: Option<String>,
 
     /// Updated tags (comma-separated)
-    #[arg(short, long, value_delimiter = ',')]
+    #[arg(short = 'g', long, value_delimiter = ',')]
     pub tags: Option<Vec<String>>,
 
     /// Updated priority (P1, P2, P3)
-    #[arg(short, long)]
+    #[arg(short = 'P', long)]
     pub priority: Option<String>,
 
     /// Updated references
-    #[arg(short, long)]
+    #[arg(short = 'R', long)]
     pub references: Option<String>,
 
     /// Updated verification command
-    #[arg(short, long)]
+    #[arg(short = 'V', long)]
     pub verification: Option<String>,
 }
 
@@ -137,10 +137,10 @@ pub struct ValidateArgs {
     pub category: Option<String>,
 
     /// Validate specific constraint ID
-    #[arg(short, long)]
+    #[arg(short = 'I', long)]
     pub id: Option<String>,
 
     /// Execute verification commands
-    #[arg(short, long)]
+    #[arg(short = 'E', long)]
     pub execute: bool,
 }
