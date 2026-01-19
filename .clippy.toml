@@ -1,0 +1,18 @@
+# Clippy configuration for Newton Constraints CLI tool
+# Constitution requirement: Clippy warnings treated as errors
+
+# Disallowed lint groups and lints
+disallowed-methods = []
+disallowed-types = []
+disallowed-macros = []
+
+# Required lints treated as errors
+msrv = "1.75"
+
+# Allow some common patterns that are acceptable in CLI tools
+allow-print-in-tests = true
+allow-expect-in-tests = true
+allow-unwrap-in-tests = true
+
+# Performance and correctness lints
+warn-on-all-wildcard-imports = true

@@ -1,0 +1,45 @@
+# Cursor IDE
+.cursor
+
+# Specify framework
+.specify
+
+# Specs directory
+specs
+
+# Rust build artifacts
+target/
+debug/
+release/
+
+# Rust backup files
+*.rs.bk
+*.rlib
+*.profraw
+*.profdata
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Log files
+*.log
+
+# Temporary files
+*.tmp
+.cache/
+
+# Cargo lock (optional, uncomment if you want to commit it)
+# Cargo.lock
