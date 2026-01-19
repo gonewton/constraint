@@ -6,4 +6,3 @@ pub mod list;
 pub mod patch;
 pub mod search;
 pub mod validate;
-

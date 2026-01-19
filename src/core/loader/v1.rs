@@ -27,7 +27,9 @@ impl ConstraintLoader for V1Loader {
         }
 
         // Validate the loaded constraint
-        constraint.validate().map_err(|e| LoaderError::Validation(e.to_string()))?;
+        constraint
+            .validate()
+            .map_err(|e| LoaderError::Validation(e.to_string()))?;
 
         Ok(constraint)
     }

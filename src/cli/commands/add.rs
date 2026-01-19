@@ -27,19 +27,21 @@ pub fn run(args: AddArgs) -> Result<(), Box<dyn std::error::Error>> {
     })?;
 
     // Initialize workspace if needed
-    let workspace = Workspace::discover().or_else(|_: crate::core::error::ConstraintError| -> Result<Workspace, Box<dyn std::error::Error>> {
-        // If workspace doesn't exist, create it
-        let workspace = Workspace::discover().unwrap_or_else(|_| {
-            // Create workspace in current directory
-            let current = std::env::current_dir().unwrap();
-            let newton_dir = current.join(".newton");
-            std::fs::create_dir_all(&newton_dir).unwrap();
-            std::fs::create_dir_all(newton_dir.join("constraints")).unwrap();
-            Workspace::new(newton_dir)
-        });
-        workspace.ensure_structure()?;
-        Ok(workspace)
-    })?;
+    let workspace = Workspace::discover().or_else(
+        |_: crate::core::error::ConstraintError| -> Result<Workspace, Box<dyn std::error::Error>> {
+            // If workspace doesn't exist, create it
+            let workspace = Workspace::discover().unwrap_or_else(|_| {
+                // Create workspace in current directory
+                let current = std::env::current_dir().unwrap();
+                let newton_dir = current.join(".newton");
+                std::fs::create_dir_all(&newton_dir).unwrap();
+                std::fs::create_dir_all(newton_dir.join("constraints")).unwrap();
+                Workspace::new(newton_dir)
+            });
+            workspace.ensure_structure()?;
+            Ok(workspace)
+        },
+    )?;
 
     // Save constraint
     save_constraint(&workspace, &constraint)?;

@@ -107,10 +107,10 @@ fn format_validation_status(status: &crate::core::constraint::ValidationStatus) 
     }
 }
 
-    #[cfg(test)]
-    mod tests {
-        use super::*;
-        use crate::core::constraint::ConstraintType;
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::core::constraint::ConstraintType;
 
     #[test]
     fn test_format_constraint_type() {

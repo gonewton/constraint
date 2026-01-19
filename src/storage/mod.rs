@@ -2,4 +2,5 @@
 
 pub mod jsonl;
 
+#[allow(unused_imports)]
 pub use jsonl::*;

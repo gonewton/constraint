@@ -10,11 +10,11 @@ use crate::core::error::ConstraintError;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "UPPERCASE")]
 pub enum ConstraintType {
-    Must,      // Absolute requirement
-    Shall,     // Strong requirement
+    Must,  // Absolute requirement
+    Shall, // Strong requirement
     #[default]
-    Should,    // Recommended but not mandatory
-    May,       // Optional/permitted
+    Should, // Recommended but not mandatory
+    May,   // Optional/permitted
     Forbidden, // Explicitly prohibited
 }
 
@@ -80,7 +80,9 @@ pub struct Constraint {
 impl Constraint {
     /// Create a new constraint with validation
     pub fn new(params: ConstraintParams) -> Result<Self, ConstraintError> {
-        let id = params.id.unwrap_or_else(|| Self::generate_id(&params.text, &params.category, &params.r#type));
+        let id = params
+            .id
+            .unwrap_or_else(|| Self::generate_id(&params.text, &params.category, &params.r#type));
 
         let constraint = Self {
             version: 1,

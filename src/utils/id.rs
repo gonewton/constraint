@@ -5,6 +5,12 @@ use sha2::{Digest, Sha256};
 /// ID generation utility for constraints
 pub struct IdGenerator;
 
+impl Default for IdGenerator {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl IdGenerator {
     /// Create a new ID generator
     pub fn new() -> Self {
@@ -12,6 +18,7 @@ impl IdGenerator {
     }
 
     /// Generate a deterministic ID from constraint content
+    #[allow(unused)]
     pub fn generate(&mut self, text: &str, category: &str, constraint_type: &str) -> String {
         let mut hasher = Sha256::new();
         hasher.update(text.as_bytes());
@@ -33,6 +40,7 @@ impl IdGenerator {
     }
 
     /// Convert 3 bytes to exactly 6 base36 characters with padding
+    #[allow(unused)]
     fn encode_base36_6chars(bytes: &[u8]) -> String {
         // Convert 3 bytes (24 bits) to u32
         let num = u32::from_be_bytes([0, bytes[0], bytes[1], bytes[2]]);

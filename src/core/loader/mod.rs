@@ -6,6 +6,7 @@ use crate::core::error::LoaderError;
 /// Trait for loading and upgrading constraint formats
 pub trait ConstraintLoader: Send + Sync {
     /// Get the version this loader handles
+    #[allow(unused)]
     fn version(&self) -> u32;
 
     /// Check if this loader can handle the given version
@@ -22,6 +23,12 @@ pub trait ConstraintLoader: Send + Sync {
 pub struct LoaderRegistry {
     loaders: Vec<Box<dyn ConstraintLoader>>,
     current_version: u32,
+}
+
+impl Default for LoaderRegistry {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl LoaderRegistry {
@@ -55,7 +62,7 @@ impl LoaderRegistry {
             .loaders
             .iter()
             .find(|l| l.can_load(version))
-            .ok_or_else(|| LoaderError::UnknownVersion(version))?;
+            .ok_or(LoaderError::UnknownVersion(version))?;
 
         // Load the constraint
         let mut constraint = loader.load(data)?;
@@ -78,7 +85,7 @@ impl LoaderRegistry {
                 .loaders
                 .iter()
                 .find(|l| l.can_load(constraint.version))
-                .ok_or_else(|| LoaderError::UnknownVersion(constraint.version))?;
+                .ok_or(LoaderError::UnknownVersion(constraint.version))?;
 
             constraint = loader.upgrade(constraint)?;
         }

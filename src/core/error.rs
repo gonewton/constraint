@@ -27,6 +27,7 @@ pub enum ConstraintError {
     InvalidIdFormat(String),
 
     #[error("Constraint ID collision: {id} already exists")]
+    #[allow(dead_code)]
     IdCollision { id: String },
 
     #[error("IO error: {0}")]
@@ -46,15 +47,19 @@ pub enum StorageError {
     Json(#[from] serde_json::Error),
 
     #[error("Load error: {0}")]
+    #[allow(dead_code)]
     LoadError(String),
 
     #[error("Invalid constraint ID: {0}")]
+    #[allow(dead_code)]
     InvalidId(String),
 
     #[error("File lock error: {0}")]
+    #[allow(dead_code)]
     LockError(String),
 
     #[error("File corruption detected: {0}")]
+    #[allow(dead_code)]
     Corruption(String),
 }
 
@@ -71,6 +76,7 @@ pub enum LoaderError {
     Json(#[from] serde_json::Error),
 
     #[error("Migration error: {0}")]
+    #[allow(dead_code)]
     Migration(String),
 
     #[error("Validation error: {0}")]

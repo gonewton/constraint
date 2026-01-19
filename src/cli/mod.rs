@@ -4,6 +4,7 @@ pub mod args;
 pub mod commands;
 
 pub use args::*;
+#[allow(unused_imports)]
 pub use commands::*;
 
 /// Run the CLI application

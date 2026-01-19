@@ -56,6 +56,7 @@ impl Workspace {
     }
 
     /// Get the path for a specific constraint file
+    #[allow(unused)]
     pub fn constraint_file(&self, category: &str, id: &str) -> Result<PathBuf, ConstraintError> {
         // Validate ID format
         if !crate::utils::id::IdGenerator::validate(id) {
@@ -67,14 +68,15 @@ impl Workspace {
 
     /// Ensure the workspace structure exists
     pub fn ensure_structure(&self) -> Result<(), ConstraintError> {
-        std::fs::create_dir_all(&self.root).map_err(|e| ConstraintError::Io(e))?;
+        std::fs::create_dir_all(&self.root).map_err(ConstraintError::Io)?;
 
-        std::fs::create_dir_all(self.constraints_dir()).map_err(|e| ConstraintError::Io(e))?;
+        std::fs::create_dir_all(self.constraints_dir()).map_err(ConstraintError::Io)?;
 
         Ok(())
     }
 
     /// List all available categories
+    #[allow(unused)]
     pub fn list_categories(&self) -> Result<Vec<String>, ConstraintError> {
         let constraints_dir = self.constraints_dir();
 
@@ -84,8 +86,8 @@ impl Workspace {
 
         let mut categories = vec![];
 
-        for entry in std::fs::read_dir(&constraints_dir).map_err(|e| ConstraintError::Io(e))? {
-            let entry = entry.map_err(|e| ConstraintError::Io(e))?;
+        for entry in std::fs::read_dir(&constraints_dir).map_err(ConstraintError::Io)? {
+            let entry = entry.map_err(ConstraintError::Io)?;
             let path = entry.path();
 
             if path.is_dir() {
@@ -100,6 +102,7 @@ impl Workspace {
     }
 
     /// Check if workspace is properly initialized
+    #[allow(unused)]
     pub fn is_initialized(&self) -> bool {
         self.root.exists()
             && self.root.is_dir()
