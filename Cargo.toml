@@ -37,4 +37,4 @@ reqwest = { version = "0.12", default-features = false, features = ["json", "rus
 tempfile = "3.10"
 assert_cmd = "2.0"
 predicates = "3.0"
-insta = "1.39"
+insta = "1.39"# Release trigger: Mon Jan 19 09:11:42 PM UTC 2026
