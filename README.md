@@ -2,6 +2,8 @@
 
 A CLI tool for managing project constraints with RFC 2119 compliance. Define and validate project requirements using formal constraint terminology (MUST, SHALL, SHOULD, MAY, FORBIDDEN).
 
+[![Coverage](https://img.shields.io/badge/coverage-unknown-lightgrey)](https://github.com/gonewton/constraints/actions/workflows/ci.yml)
+
 ## Installation
 
 ```bash
