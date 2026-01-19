@@ -50,6 +50,10 @@ jobs:
       - name: Build release binaries
         run: cargo build --release --target ${{ matrix.target }}
 
+      - name: Install zip (for Windows)
+        if: matrix.os == 'windows-latest'
+        run: choco install zip
+
       - name: Create release archives
         shell: bash
         run: |
