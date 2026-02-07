@@ -9,17 +9,28 @@ on:
       - 'README.md'
       - 'CHANGELOG.md'
 
+permissions:
+  contents: write
+  actions: write
+  pull-requests: write
+
 jobs:
   auto-release:
     name: Auto Release
     runs-on: ubuntu-latest
     if: "!contains(github.event.head_commit.message, '[skip release]') && !contains(github.event.pull_request.labels.*.name, 'no-release')"
     steps:
+      - name: Generate GitHub App token
+        uses: actions/create-github-app-token@v1
+        id: app-token
+        with:
+          owner: gonewton
+
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ steps.app-token.outputs.token }}
 
       - name: Check if Cargo.toml version changed
         id: check-version
@@ -28,12 +39,24 @@ jobs:
           LAST_VERSION=${LAST_TAG#v}
           CURRENT_VERSION=$(grep '^version =' Cargo.toml | head -1 | sed 's/.*"\(.*\)"/\1/')
           if [ "$LAST_VERSION" != "$CURRENT_VERSION" ]; then
-            echo "Version changed from $LAST_VERSION to $CURRENT_VERSION, skipping auto-release"
-            echo "skip=true" >> $GITHUB_OUTPUT
-          else
-            echo "Version unchanged, proceeding with auto-release"
+            echo "Version changed from $LAST_VERSION to $CURRENT_VERSION, proceeding with auto-release"
             echo "skip=false" >> $GITHUB_OUTPUT
+          else
+            echo "Version unchanged, skipping auto-release"
+            echo "skip=true" >> $GITHUB_OUTPUT
           fi
+
+      - name: Create release branch
+        if: steps.check-version.outputs.skip == 'false'
+        run: |
+          CURRENT_VERSION=$(grep '^version =' Cargo.toml | head -1 | sed 's/.*"\(.*\)"/\1/')
+          echo "CURRENT_VERSION=$CURRENT_VERSION" >> $GITHUB_ENV
+          BRANCH_NAME="auto-release-$CURRENT_VERSION"
+          # Delete remote branch if it exists
+          git push origin --delete $BRANCH_NAME 2>/dev/null || true
+          # Delete local branch if it exists
+          git branch -D $BRANCH_NAME 2>/dev/null || true
+          git checkout -b $BRANCH_NAME
 
       - name: Bump patch version
         if: steps.check-version.outputs.skip == 'false'
@@ -42,24 +65,98 @@ jobs:
           IFS='.' read -r major minor patch <<< "$CURRENT_VERSION"
           NEW_PATCH=$((patch + 1))
           NEW_VERSION="$major.$minor.$NEW_PATCH"
+          echo "NEW_VERSION=$NEW_VERSION" >> $GITHUB_ENV # Set NEW_VERSION as an environment variable
           sed -i "s/^version = \"$CURRENT_VERSION\"/version = \"$NEW_VERSION\"/" Cargo.toml
 
-      - name: Commit version bump
+      - name: Commit version bump and push release branch
         if: steps.check-version.outputs.skip == 'false'
         run: |
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
           git add Cargo.toml
-          NEW_VERSION=$(grep '^version =' Cargo.toml | head -1 | sed 's/.*"\(.*\)"/\1/')
-          git commit -m "chore: bump version to $NEW_VERSION"
+          git commit -m "chore: bump version to ${{ env.NEW_VERSION }}"
+          git push --force-with-lease origin auto-release-${{ env.CURRENT_VERSION }}
 
-      - name: Push changes
-        if: steps.check-version.outputs.skip == 'false'
-        run: git push
-
-      - name: Create tag
+      - name: Create or update a draft PR
         if: steps.check-version.outputs.skip == 'false'
         run: |
-          NEW_VERSION=$(grep '^version =' Cargo.toml | head -1 | sed 's/.*"\(.*\)"/\1/')
-          git tag "v$NEW_VERSION"
-          git push origin "v$NEW_VERSION"
+          PR_TITLE="Draft: Release ${{ env.NEW_VERSION }}"
+          PR_BODY="This PR bumps the version to ${{ env.NEW_VERSION }} for a new release."
+          PR_EXISTS=$(gh pr list --head auto-release-${{ env.CURRENT_VERSION }} --json number -q '.[].number')
+          if [ -n "$PR_EXISTS" ]; then
+            echo "PR already exists, updating..."
+            gh pr edit $PR_EXISTS --title "$PR_TITLE" --body "$PR_BODY" --add-label "auto-release" --draft
+          else
+            echo "Creating new PR..."
+            gh pr create --base main --head auto-release-${{ env.CURRENT_VERSION }} --title "$PR_TITLE" --body "$PR_BODY" --add-label "auto-release" --draft
+          fi
+        env:
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }} # Use App token for gh cli
+
+      - name: Tag and trigger release workflow
+        if: steps.check-version.outputs.skip == 'false'
+        run: |
+          TAG_NAME="v${{ env.NEW_VERSION }}"
+          # Set up git with App token
+          git remote set-url origin https://x-access-token:${{ steps.app-token.outputs.token }}@github.com/${{ github.repository }}.git
+          git tag $TAG_NAME
+          git push origin $TAG_NAME
+          # Trigger release.yml
+          gh workflow run release.yml -f tag="$TAG_NAME" --ref main
+        env:
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }} # Use App token for gh cli, App token for git push
+
+  cleanup-old-releases:
+    name: Cleanup Old Releases
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Generate GitHub App token
+        uses: actions/create-github-app-token@v1
+        id: app-token
+        with:
+          owner: gonewton
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+
+      - name: Cleanup old branches
+        run: |
+          git fetch origin "+refs/heads/*:refs/remotes/origin/*"
+          git branch -r | grep 'origin/auto-release-' | while read branch; do
+            BRANCH_NAME=$(echo $branch | sed 's/origin\///')
+            echo "Checking branch: $BRANCH_NAME"
+
+            # Check if there's an open PR for this branch
+            PR_STATUS=$(gh pr list --state open --head $BRANCH_NAME --json number -q '.[].number')
+            if [ -n "$PR_STATUS" ]; then
+              echo "  Skipping: Open PR exists for $BRANCH_NAME"
+              continue
+            fi
+
+            # Check if branch is merged
+            MERGED=$(git log origin/main --pretty=format:%H | grep $(git log $branch --pretty=format:%H -n 1))
+            if [ -n "$MERGED" ]; then
+              echo "  Deleting merged branch: $BRANCH_NAME"
+              git push origin --delete $BRANCH_NAME
+              continue
+            fi
+
+            # Check if branch is older than 7 days
+            BRANCH_DATE=$(git show --format="%ci" $branch | head -n 1)
+            SEVEN_DAYS_AGO=$(date -d "7 days ago" +%s)
+            BRANCH_TIMESTAMP=$(date -d "$BRANCH_DATE" +%s)
+
+            if (( BRANCH_TIMESTAMP < SEVEN_DAYS_AGO )); then
+              echo "  Deleting old branch: $BRANCH_NAME (last commit: $BRANCH_DATE)"
+              git push origin --delete $BRANCH_NAME
+            else
+              echo "  Keeping: Branch $BRANCH_NAME is recent."
+            fi
+          done
+        env:
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
