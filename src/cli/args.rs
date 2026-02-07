@@ -143,4 +143,8 @@ pub struct ValidateArgs {
     /// Execute verification commands
     #[arg(short = 'E', long)]
     pub execute: bool,
+
+    /// Verbose output with full verification details
+    #[arg(short = 'v', long)]
+    pub verbose: bool,
 }

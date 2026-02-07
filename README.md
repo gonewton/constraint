@@ -46,7 +46,9 @@ constraint search "password"
 constraint patch nt-a1b2c3 --text "Updated security requirement"
 
 # Validate compliance
-constraint validate --execute
+constraint validate                    # Structural validation only
+constraint validate --execute         # Run verification commands  
+constraint validate --verbose          # Show detailed output
 constraint validate --category security --execute
 ```
 

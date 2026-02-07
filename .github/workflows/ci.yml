@@ -48,6 +48,16 @@ jobs:
           echo "Coverage: ${COVERAGE_PERCENT}%"
           echo "coverage_percentage=${COVERAGE_PERCENT}" >> $GITHUB_ENV
 
+      - name: Check coverage threshold
+        run: |
+          THRESHOLD=70
+          if (( $(echo "${coverage_percentage} < ${THRESHOLD}" | bc -l) )); then
+            echo "❌ Coverage ${coverage_percentage}% is below required threshold ${THRESHOLD}%"
+            exit 1
+          else
+            echo "✅ Coverage ${coverage_percentage}% meets required threshold ${THRESHOLD}%"
+          fi
+
       - name: Upload coverage report
         uses: actions/upload-artifact@v4
         with:

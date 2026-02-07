@@ -72,14 +72,69 @@ constraint patch nt-a1b2c3 --text "All passwords must be hashed using argon2id" 
 ### 4. Validate Compliance
 
 ```bash
-# Validate all constraints (checks format only)
+# Structural validation only (checks format, required fields, etc.)
 constraint validate
 
 # Validate with verification execution
 constraint validate --execute
 
+# Verbose validation with detailed output
+constraint validate --execute --verbose
+
 # Validate specific category
 constraint validate --category security --execute
+```
+
+#### Validate (Structure Only)
+
+When run without `--execute`, the validate command performs structural validation:
+
+```bash
+constraint validate
+# Expected output:
+# Validating 3 constraint(s)...
+# ✅ nt-a1b2c3 - VALID
+#    All passwords must be hashed using bcrypt
+#    Output: Structural validation passed
+# ✅ nt-b2d3e4 - VALID  
+#    All public functions must have unit tests
+#    Output: Structural validation passed
+# ✅ nt-c3e4f5 - VALID
+#    Never log sensitive user data
+#    Output: Structural validation passed
+#
+# Structural Validation Summary:
+#   ✅ Valid: 3
+#   ❌ Invalid: 0
+#   📊 Total: 3
+#
+# ✅ All constraints are structurally valid!
+# ℹ️ Use --execute to run verification commands.
+```
+
+#### Verbose Validation
+
+Use `--verbose` to see full verification output and timing:
+
+```bash
+constraint validate --execute --verbose
+# Expected output:
+# Validating 1 constraint(s)...
+# ✅ nt-a1b2c3 - PASSED
+#    All passwords must be hashed using bcrypt
+#    Output: cargo test --test password-security
+#          running 1 test
+#          test password_security::tests::verify_hashing ... ok
+#          test result: ok. 1 passed; 0 failed
+#    Duration: 234ms
+#
+# Verification Summary:
+#   ✅ Passed: 1
+#   ❌ Failed: 0
+#   ⏭️ Skipped: 0
+#   📊 Total: 1
+#
+# ✅ All validations completed successfully!
 ```
 
 ## Common Patterns

@@ -24,6 +24,8 @@ enum ValidationStatus {
     Passed,
     Failed,
     Skipped,
+    Valid,
+    Invalid,
 }
 
 /// Run the validate command
@@ -51,12 +53,15 @@ pub fn run(args: ValidateArgs) -> Result<(), Box<dyn std::error::Error>> {
     }
 
     // Display results
-    display_results(&results, args.execute)?;
+    display_results(&results, args.execute, args.verbose)?;
 
     // Exit with appropriate code
-    let has_failures = results
-        .iter()
-        .any(|r| matches!(r.status, ValidationStatus::Failed));
+    let has_failures = results.iter().any(|r| {
+        matches!(
+            r.status,
+            ValidationStatus::Failed | ValidationStatus::Invalid
+        )
+    });
     if has_failures {
         std::process::exit(1);
     }
@@ -120,19 +125,18 @@ fn validate_constraint(
             )
         }
     } else {
-        // Just check if verification method exists
-        if constraint.verification.is_some() {
-            (
-                ValidationStatus::Skipped,
-                Some("Verification command available".to_string()),
+        // Perform structural validation
+        match constraint.validate() {
+            Ok(()) => (
+                ValidationStatus::Valid,
+                Some("Structural validation passed".to_string()),
                 None,
-            )
-        } else {
-            (
-                ValidationStatus::Skipped,
-                Some("No verification method".to_string()),
+            ),
+            Err(e) => (
+                ValidationStatus::Invalid,
                 None,
-            )
+                Some(format!("Structural validation failed: {}", e)),
+            ),
         }
     };
 
@@ -176,16 +180,21 @@ fn execute_verification_command(
 fn display_results(
     results: &[ValidationResult],
     executed: bool,
+    verbose: bool,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let mut passed = 0;
     let mut failed = 0;
     let mut skipped = 0;
+    let mut valid = 0;
+    let mut invalid = 0;
 
     for result in results {
         match result.status {
             ValidationStatus::Passed => passed += 1,
             ValidationStatus::Failed => failed += 1,
             ValidationStatus::Skipped => skipped += 1,
+            ValidationStatus::Valid => valid += 1,
+            ValidationStatus::Invalid => invalid += 1,
         }
 
         // Display individual result
@@ -193,45 +202,71 @@ fn display_results(
             ValidationStatus::Passed => "✅",
             ValidationStatus::Failed => "❌",
             ValidationStatus::Skipped => "⏭️",
+            ValidationStatus::Valid => "✅",
+            ValidationStatus::Invalid => "❌",
         };
 
         let status_text = match result.status {
             ValidationStatus::Passed => "PASSED",
             ValidationStatus::Failed => "FAILED",
             ValidationStatus::Skipped => "SKIPPED",
+            ValidationStatus::Valid => "VALID",
+            ValidationStatus::Invalid => "INVALID",
         };
 
         println!("{} {} - {}", status_icon, result.constraint_id, status_text);
         println!("   {}", result.constraint_text);
 
         if let Some(output) = &result.output {
-            println!("   Output: {}", output);
+            if verbose || executed {
+                println!("   Output: {}", output);
+            } else {
+                // For non-verbose mode, truncate long output
+                let truncated = if output.len() > 100 {
+                    format!("{}...", &output[..97])
+                } else {
+                    output.clone()
+                };
+                println!("   Output: {}", truncated);
+            }
         }
 
         if let Some(error) = &result.error {
             println!("   Error: {}", error);
         }
 
-        println!("   Duration: {}ms", result.duration_ms);
+        if verbose || executed {
+            println!("   Duration: {}ms", result.duration_ms);
+        }
         println!();
     }
 
     // Display summary
-    println!("Validation Summary:");
-    println!("  ✅ Passed: {}", passed);
-    println!("  ❌ Failed: {}", failed);
-    println!("  ⏭️ Skipped: {}", skipped);
+    if executed {
+        println!("Verification Summary:");
+        println!("  ✅ Passed: {}", passed);
+        println!("  ❌ Failed: {}", failed);
+        println!("  ⏭️ Skipped: {}", skipped);
+    } else {
+        println!("Structural Validation Summary:");
+        println!("  ✅ Valid: {}", valid);
+        println!("  ❌ Invalid: {}", invalid);
+    }
     println!("  📊 Total: {}", results.len());
 
     if executed && failed > 0 {
         println!();
-        println!("❌ Some validations failed. Check the output above for details.");
+        println!("❌ Some verifications failed. Check the output above for details.");
     } else if executed {
         println!();
-        println!("✅ All validations completed successfully!");
+        println!("✅ All verifications completed successfully!");
+    } else if invalid > 0 {
+        println!();
+        println!("❌ Some constraints are invalid. Check the output above for details.");
     } else {
         println!();
-        println!("ℹ️ Verification commands were not executed. Use --execute to run them.");
+        println!("✅ All constraints are structurally valid!");
+        println!("ℹ️ Use --execute to run verification commands.");
     }
 
     Ok(())
@@ -240,11 +275,139 @@ fn display_results(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::constraint::{Constraint, ConstraintParams, ConstraintType};
 
     #[test]
     fn test_validation_status_display() {
         // Test that validation status works correctly
         let status = ValidationStatus::Passed;
         assert!(matches!(status, ValidationStatus::Passed));
+    }
+
+    #[test]
+    fn test_structural_validation_valid_constraint() {
+        // Create a valid constraint
+        let constraint = Constraint::new(ConstraintParams {
+            r#type: ConstraintType::Must,
+            category: "security".to_string(),
+            text: "All passwords must be hashed".to_string(),
+            author: "test-author".to_string(),
+            id: None,
+            tags: vec![],
+            priority: None,
+            references: "".to_string(),
+            verification: None,
+        })
+        .unwrap();
+
+        // Test structural validation (execute = false)
+        let result = validate_constraint(&constraint, false).unwrap();
+        assert!(matches!(result.status, ValidationStatus::Valid));
+        assert!(result.output.is_some());
+        assert!(result.error.is_none());
+    }
+
+    #[test]
+    fn test_structural_validation_invalid_constraint() {
+        // Create a constraint with invalid category (should fail validation)
+        let mut constraint = Constraint::new(ConstraintParams {
+            r#type: ConstraintType::Must,
+            category: "security".to_string(),
+            text: "All passwords must be hashed".to_string(),
+            author: "test-author".to_string(),
+            id: None,
+            tags: vec![],
+            priority: None,
+            references: "".to_string(),
+            verification: None,
+        })
+        .unwrap();
+
+        // Manually corrupt the category to make it invalid
+        constraint.category = "Invalid-Category".to_string();
+
+        // Test structural validation (execute = false)
+        let result = validate_constraint(&constraint, false).unwrap();
+        assert!(matches!(result.status, ValidationStatus::Invalid));
+        assert!(result.output.is_none());
+        assert!(result.error.is_some());
+        assert!(result
+            .error
+            .unwrap()
+            .contains("Structural validation failed"));
+    }
+
+    #[test]
+    fn test_verification_execution_with_command() {
+        // Create a constraint with a verification command
+        let constraint = Constraint::new(ConstraintParams {
+            r#type: ConstraintType::Must,
+            category: "security".to_string(),
+            text: "All passwords must be hashed".to_string(),
+            author: "test-author".to_string(),
+            id: None,
+            tags: vec![],
+            priority: None,
+            references: "".to_string(),
+            verification: Some("echo 'test passed'".to_string()),
+        })
+        .unwrap();
+
+        // Test verification execution (execute = true)
+        let result = validate_constraint(&constraint, true).unwrap();
+        assert!(matches!(result.status, ValidationStatus::Passed));
+        assert!(result.output.is_some());
+        assert!(result.error.is_none());
+        assert!(result.output.unwrap().contains("test passed"));
+    }
+
+    #[test]
+    fn test_verification_execution_without_command() {
+        // Create a constraint without verification command
+        let constraint = Constraint::new(ConstraintParams {
+            r#type: ConstraintType::Must,
+            category: "security".to_string(),
+            text: "All passwords must be hashed".to_string(),
+            author: "test-author".to_string(),
+            id: None,
+            tags: vec![],
+            priority: None,
+            references: "".to_string(),
+            verification: None,
+        })
+        .unwrap();
+
+        // Test verification execution (execute = true)
+        let result = validate_constraint(&constraint, true).unwrap();
+        assert!(matches!(result.status, ValidationStatus::Skipped));
+        assert!(result.output.is_none());
+        assert!(result.error.is_some());
+        assert!(result
+            .error
+            .unwrap()
+            .contains("No verification method specified"));
+    }
+
+    #[test]
+    fn test_verification_execution_failing_command() {
+        // Create a constraint with a failing verification command
+        let constraint = Constraint::new(ConstraintParams {
+            r#type: ConstraintType::Must,
+            category: "security".to_string(),
+            text: "All passwords must be hashed".to_string(),
+            author: "test-author".to_string(),
+            id: None,
+            tags: vec![],
+            priority: None,
+            references: "".to_string(),
+            verification: Some("exit 1".to_string()),
+        })
+        .unwrap();
+
+        // Test verification execution (execute = true)
+        let result = validate_constraint(&constraint, true).unwrap();
+        assert!(matches!(result.status, ValidationStatus::Failed));
+        assert!(result.output.is_some());
+        assert!(result.error.is_none());
     }
 }
